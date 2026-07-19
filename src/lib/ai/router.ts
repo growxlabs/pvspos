@@ -122,8 +122,9 @@ class GeminiProvider implements AIProvider {
 
     while (attempts < maxAttempts) {
       const apiKey = keyRotator.getCurrentKey();
+      const modelName = attempts === 0 ? 'gemini-2.5-flash' : 'gemini-1.5-flash';
       try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
         const parts = [];
         if (req.systemPrompt) {
           parts.push({ text: req.systemPrompt });
@@ -148,7 +149,7 @@ class GeminiProvider implements AIProvider {
 
           // If rate limit or quota exceeded, rotate key immediately and retry
           if (response.status === 429 || errMessage.toLowerCase().includes('quota') || errMessage.toLowerCase().includes('rate limit')) {
-            console.warn(`[AI-Router] Key rate limited/quota hit. Rotating key...`);
+            console.warn(`[AI-Router] Key rate limited/quota hit on ${modelName}. Rotating key...`);
             keyRotator.rotate();
             attempts++;
             continue;
@@ -163,10 +164,10 @@ class GeminiProvider implements AIProvider {
         return {
           text,
           provider: this.name,
-          model: 'gemini-2.5-flash'
+          model: modelName
         };
       } catch (err: any) {
-        console.error(`[AI-Router] Gemini attempt ${attempts + 1} failed:`, err.message);
+        console.error(`[AI-Router] Gemini attempt ${attempts + 1} (${modelName}) failed:`, err.message);
         keyRotator.rotate();
         attempts++;
         if (attempts >= maxAttempts) {
@@ -186,10 +187,11 @@ class GeminiProvider implements AIProvider {
 class OpenRouterProvider implements AIProvider {
   name = 'OpenRouter';
   private fallbackModels = [
-    'google/gemma-2-9b-it:free',
-    'deepseek/deepseek-r1:free',
-    'qwen/qwen-2.5-72b-instruct:free',
-    'meta-llama/llama-3-8b-instruct:free'
+    'deepseek/deepseek-chat',            // DeepSeek V3 (Paid, extremely cheap, fast & reliable)
+    'google/gemini-2.5-flash',           // Gemini 2.5 Flash via OpenRouter (Paid)
+    'meta-llama/llama-3.3-70b-instruct', // Llama 3.3 70B (Paid, highly smart)
+    'qwen/qwen-2.5-72b-instruct:free',   // Qwen 72B (Free fallback)
+    'deepseek/deepseek-r1:free'          // DeepSeek R1 (Free fallback)
   ];
 
   async generate(req: AIRequest): Promise<AIResponse> {
