@@ -121,7 +121,6 @@ export function ReceiptPreview({
       {/* Footer Note */}
       <div className="text-center text-[10px] text-gray-600 space-y-1 pt-1">
         <p>Thank you for shopping with us!</p>
-        <p>Goods once sold can be exchanged within 7 days.</p>
       </div>
     </div>
   );
