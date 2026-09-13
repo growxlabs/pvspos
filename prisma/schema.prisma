@@ -194,7 +194,7 @@ model Product {
 model Inventory {
   id            String    @id @default(cuid())
   productId     String    @unique @map("product_id")
-  quantity      Int       @default(0)
+  quantity      Int       @default(1000)
   reorderPoint  Int       @default(10) @map("reorder_point")
   lastRestocked DateTime? @map("last_restocked")
   updatedAt     DateTime  @updatedAt @map("updated_at")

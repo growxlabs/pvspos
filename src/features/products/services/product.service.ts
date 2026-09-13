@@ -325,7 +325,7 @@ export const productService = {
         sku,
         barcode,
         inventory: {
-          create: { quantity: 0 },
+          create: { quantity: 1000 },
         },
       },
       include: { category: true, inventory: true },
