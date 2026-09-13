@@ -300,9 +300,15 @@ export const productService = {
     };
   },
 
-  async getByBarcode(barcode: string) {
+  async getByBarcode(code: string) {
     const product = await prisma.product.findFirst({
-      where: { barcode, isActive: true },
+      where: {
+        OR: [
+          { barcode: code },
+          { sku: code },
+        ],
+        isActive: true,
+      },
       include: { category: true, inventory: true },
     });
     if (!product) return null;
