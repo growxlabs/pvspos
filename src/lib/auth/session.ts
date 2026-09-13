@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { verifyAccessToken, signAccessToken, TokenPayload } from './jwt';
 import { prisma } from '@/lib/prisma/client';
 import crypto from 'crypto';
@@ -7,11 +7,29 @@ const ACCESS_COOKIE_NAME = 'pvs_access_token';
 const REFRESH_COOKIE_NAME = 'pvs_refresh_token';
 
 /**
- * Get user information from cookies (verifying Access Token first, then attempting Refresh Token fallback).
+ * Get user information from cookies or Bearer Authorization header (verifying Access Token first, then attempting Refresh Token fallback).
  */
 export async function getSessionUser(): Promise<TokenPayload | null> {
-  const cookieStore = await cookies();
-  const accessToken = cookieStore.get(ACCESS_COOKIE_NAME)?.value;
+  let accessToken: string | undefined;
+
+  // 1. Try to read from Authorization: Bearer <token> header (Mobile API client)
+  try {
+    const headerStore = await headers();
+    const authHeader = headerStore.get('authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      accessToken = authHeader.substring(7).trim();
+    }
+  } catch (e) {
+    // headers() might throw in certain static contexts
+  }
+
+  // 2. Fall back to reading from HTTP-only cookie (Web browser client)
+  if (!accessToken) {
+    try {
+      const cookieStore = await cookies();
+      accessToken = cookieStore.get(ACCESS_COOKIE_NAME)?.value;
+    } catch (e) {}
+  }
 
   if (accessToken) {
     const payload = await verifyAccessToken(accessToken);
@@ -21,7 +39,12 @@ export async function getSessionUser(): Promise<TokenPayload | null> {
   }
 
   // Fallback to refresh token
-  const refreshToken = cookieStore.get(REFRESH_COOKIE_NAME)?.value;
+  let refreshToken: string | undefined;
+  try {
+    const cookieStore = await cookies();
+    refreshToken = cookieStore.get(REFRESH_COOKIE_NAME)?.value;
+  } catch (e) {}
+
   if (!refreshToken) {
     return null;
   }
@@ -78,13 +101,16 @@ export async function getSessionUser(): Promise<TokenPayload | null> {
     const newAccessToken = await signAccessToken(payload);
 
     // Refresh access token cookie
-    cookieStore.set(ACCESS_COOKIE_NAME, newAccessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 15 * 60, // 15 minutes
-    });
+    try {
+      const cookieStore = await cookies();
+      cookieStore.set(ACCESS_COOKIE_NAME, newAccessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 15 * 60, // 15 minutes
+      });
+    } catch (e) {}
 
     return payload;
   } catch (error) {
