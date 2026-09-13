@@ -1,6 +1,5 @@
 import { Sidebar } from '@/components/layout/sidebar';
 import { Navbar } from '@/components/layout/navbar';
-import { AiCopilotDrawer } from '@/components/layout/ai-copilot-drawer';
 
 export default function DashboardLayout({
   children,
@@ -16,8 +15,6 @@ export default function DashboardLayout({
           {children}
         </main>
       </div>
-      {/* Global AI Copilot Assistant Drawer */}
-      <AiCopilotDrawer />
     </div>
   );
 }
